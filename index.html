@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#007aff">
+  <title>카드 지출</title>
+  <style>
+    :root { --blue:#007aff; --ink:#202124; --muted:#737780; --paper:#fff; --bg:#f5f5f7; --line:#e8e8ed; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    .app { width:100%; max-width:480px; min-height:100vh; margin:auto; padding:29px 20px 32px; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; }
+    .brand { font-size:25px; font-weight:750; letter-spacing:-.8px; }
+    .round-button { width:44px; height:44px; border:0; border-radius:50%; background:#fff; color:#32343a; box-shadow:0 2px 8px rgba(0,0,0,.10); display:grid; place-items:center; font-size:26px; line-height:1; transition:transform .15s,background .15s; }
+    .round-button:active, .primary:active, .card:active { transform:scale(.97); }
+    .month-row { display:flex; align-items:center; justify-content:space-between; margin:30px 0 16px; }
+    .month-row h1 { font-size:18px; margin:0; letter-spacing:-.3px; }
+    .month-nav { display:flex; gap:8px; }
+    .month-nav button { width:34px; height:34px; border:1px solid var(--line); border-radius:11px; background:#fff; color:#444; font-size:22px; line-height:1; }
+    .summary { background:linear-gradient(135deg,#087cf3,#3f9cff); border-radius:24px; padding:25px 24px 23px; color:white; box-shadow:0 10px 24px rgba(0,122,255,.20); }
+    .summary-label { font-size:14px; opacity:.85; }
+    .total { margin:7px 0 22px; font-size:37px; font-weight:760; letter-spacing:-1.7px; }
+    .summary-bottom { display:flex; justify-content:space-between; font-size:14px; opacity:.9; }
+    .section-head { margin:30px 2px 13px; display:flex; align-items:center; justify-content:space-between; }
+    .section-head h2 { margin:0; font-size:18px; letter-spacing:-.4px; }
+    .text-button { border:0; background:transparent; color:var(--blue); padding:5px 0; font-size:14px; font-weight:650; }
+    .cards { display:grid; gap:12px; }
+    .card { width:100%; border:0; text-align:left; background:var(--paper); border-radius:18px; padding:17px; box-shadow:0 2px 9px rgba(0,0,0,.055); display:flex; gap:14px; align-items:center; color:inherit; }
+    .card-mark { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; flex:none; font-size:19px; color:#fff; font-weight:700; }
+    .card-info { min-width:0; flex:1; }
+    .card-name { font-size:16px; font-weight:680; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .card-number { margin-top:4px; color:var(--muted); font-size:13px; }
+    .card-spend { text-align:right; }
+    .amount { font-size:17px; font-weight:720; letter-spacing:-.4px; }
+    .edit-hint { font-size:12px; color:var(--muted); margin-top:4px; }
+    .empty { padding:38px 22px; border:1.5px dashed #d5d6db; border-radius:18px; text-align:center; color:var(--muted); background:rgba(255,255,255,.55); line-height:1.5; }
+    .empty strong { display:block; color:#484a50; font-size:16px; margin-bottom:5px; }
+    .fab { position:fixed; bottom:25px; left:50%; width:calc(100% - 40px); max-width:440px; transform:translateX(-50%); border:0; border-radius:16px; background:#202124; color:white; height:54px; font-size:16px; font-weight:700; box-shadow:0 7px 18px rgba(0,0,0,.18); }
+    .modal-backdrop { position:fixed; inset:0; padding:20px; background:rgba(20,22,27,.36); display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .2s; }
+    .modal-backdrop.open { opacity:1; pointer-events:auto; }
+    .modal { width:100%; max-width:440px; background:#fff; border-radius:24px; padding:23px 20px 20px; transform:translateY(18px); transition:transform .2s; }
+    .modal-backdrop.open .modal { transform:none; }
+    .modal-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .modal h3 { margin:0; font-size:20px; letter-spacing:-.5px; }
+    .close { border:0; background:#f0f0f3; width:30px; height:30px; border-radius:50%; color:#555; font-size:20px; line-height:1; }
+    label { display:block; color:#5e6169; font-size:13px; font-weight:650; margin:15px 2px 7px; }
+    input { width:100%; height:49px; border:1px solid #dedee5; border-radius:12px; padding:0 14px; font-size:16px; outline:none; background:#fff; color:var(--ink); }
+    input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,122,255,.12); }
+    .color-set { display:flex; gap:10px; margin-top:8px; }
+    .swatch { width:30px; height:30px; border:3px solid white; outline:1px solid transparent; border-radius:50%; padding:0; }
+    .swatch.selected { outline-color:#333; }
+    .form-actions { display:flex; gap:10px; margin-top:23px; }
+    .primary { height:50px; flex:1; border:0; border-radius:13px; background:var(--blue); color:#fff; font-weight:700; }
+    .delete { height:50px; min-width:85px; border:0; border-radius:13px; background:#fff0f0; color:#dc3c3c; font-weight:650; }
+    .hidden { display:none !important; }
+    @media (min-width:481px) { .app { border-left:1px solid #eee; border-right:1px solid #eee; background:var(--bg); } .fab { bottom:32px; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar"><div class="brand">카드 지출</div><button class="round-button" id="addTop" aria-label="카드 추가">＋</button></div>
+    <div class="month-row"><h1 id="monthTitle">September 2026</h1><div class="month-nav"><button id="previous" aria-label="이전 달">‹</button><button id="next" aria-label="다음 달">›</button></div></div>
+    <section class="summary"><div class="summary-label">이번 달 총 지출</div><div class="total" id="total">₩0</div><div class="summary-bottom"><span id="cardCount">카드 0개</span><span>카드를 눌러 수정하세요</span></div></section>
+    <div class="section-head"><h2>내 카드</h2><button class="text-button" id="addLink">카드 추가</button></div>
+    <section class="cards" id="cards"></section>
+  </main>
+  <button class="fab" id="addFab">+ 카드 추가</button>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="presentation">
+    <form class="modal" id="cardForm">
+      <div class="modal-top"><h3 id="formTitle">카드 추가</h3><button class="close" type="button" id="closeModal" aria-label="닫기">×</button></div>
+      <label for="name">카드 이름</label><input id="name" required maxlength="28" placeholder="예: 신한 딥드림 카드" autocomplete="off">
+      <label for="lastFour">카드 끝번호 <span style="font-weight:400">(선택)</span></label><input id="lastFour" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="1234" autocomplete="off">
+      <label for="spending">지출 금액 · <span id="formMonth"></span></label><input id="spending" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required>
+      <label>카드 색상</label><div class="color-set" id="colors"></div>
+      <div class="form-actions"><button type="button" class="delete hidden" id="deleteCard">삭제</button><button class="primary" id="saveCard">저장</button></div>
+    </form>
+  </div>
+
+  <script>
+    const colors=['#007aff','#8257e6','#ef5b72','#f19a38','#17a673','#3d78c9'];
+    const state={ month:new Date().toISOString().slice(0,7), cards:[], editing:null, color:colors[0] };
+    const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(n||0);
+    const monthText=key=>new Date(key+'-02T12:00:00').toLocaleDateString('ko-KR',{year:'numeric',month:'long'});
+    function load(){ try { state.cards=JSON.parse(localStorage.getItem('card-spend-data'))||[]; } catch(e) { state.cards=[]; } }
+    function save(){ localStorage.setItem('card-spend-data',JSON.stringify(state.cards)); }
+    function amount(card){ return Number(card.spending?.[state.month]||0); }
+    function render(){
+      $('#monthTitle').textContent=monthText(state.month); $('#formMonth').textContent=monthText(state.month);
+      const total=state.cards.reduce((sum,c)=>sum+amount(c),0); $('#total').textContent=money(total); $('#cardCount').textContent=`카드 ${state.cards.length}개`;
+      const list=$('#cards'); list.innerHTML='';
+      if(!state.cards.length){ list.innerHTML='<div class="empty"><strong>등록된 카드가 없어요</strong>첫 카드를 추가하고 월별 지출을 기록해 보세요.</div>'; return; }
+      state.cards.forEach(card=>{ const el=document.createElement('button'); el.className='card'; el.innerHTML=`<span class="card-mark" style="background:${card.color}">${card.name.trim().charAt(0).toUpperCase()}</span><span class="card-info"><span class="card-name">${escapeHtml(card.name)}</span><span class="card-number">${card.lastFour?'•••• '+escapeHtml(card.lastFour):'끝번호를 등록하지 않았어요'}</span></span><span class="card-spend"><span class="amount">${money(amount(card))}</span><span class="edit-hint">금액 수정</span></span>`; el.addEventListener('click',()=>openForm(card)); list.appendChild(el); });
+    }
+    function escapeHtml(v){const d=document.createElement('div');d.textContent=v;return d.innerHTML;}
+    function showColors(){ $('#colors').innerHTML=colors.map(c=>`<button class="swatch ${c===state.color?'selected':''}" type="button" data-color="${c}" style="background:${c}" aria-label="Select color"></button>`).join(''); $('#colors').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.color=b.dataset.color;showColors();}); }
+    function openForm(card=null){ state.editing=card; state.color=card?.color||colors[0]; $('#formTitle').textContent=card?'카드 수정':'카드 추가'; $('#name').value=card?.name||''; $('#lastFour').value=card?.lastFour||''; $('#spending').value=card?amount(card):''; $('#deleteCard').classList.toggle('hidden',!card); showColors(); $('#modalBackdrop').classList.add('open'); setTimeout(()=>$('#name').focus(),180); }
+    function closeForm(){ $('#modalBackdrop').classList.remove('open'); state.editing=null; }
+    function changeMonth(step){ const [y,m]=state.month.split('-').map(Number); state.month=new Date(y,m-1+step,2).toISOString().slice(0,7); render(); }
+    $('#cardForm').addEventListener('submit',e=>{ e.preventDefault(); const name=$('#name').value.trim(); const lastFour=$('#lastFour').value.replace(/\D/g,'').slice(-4); const spending=Math.max(0,Number($('#spending').value)||0); let card=state.editing; if(card){card.name=name;card.lastFour=lastFour;card.color=state.color;} else {card={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name,lastFour,color:state.color,spending:{}};state.cards.push(card);} card.spending=card.spending||{};card.spending[state.month]=spending;save();closeForm();render(); });
+    $('#deleteCard').onclick=()=>{ if(state.editing && confirm(`삭제 ${state.editing.name}?`)){ state.cards=state.cards.filter(c=>c.id!==state.editing.id);save();closeForm();render(); } };
+    ['#addTop','#addLink','#addFab'].forEach(s=>$(s).onclick=()=>openForm()); $('#closeModal').onclick=closeForm; $('#modalBackdrop').onclick=e=>{if(e.target===e.currentTarget)closeForm();}; $('#previous').onclick=()=>changeMonth(-1); $('#next').onclick=()=>changeMonth(1);
+    load(); render();
+  </script>
+</body>
+</html>
