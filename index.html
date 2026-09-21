@@ -35,7 +35,12 @@
     .card-number { margin-top:4px; color:var(--muted); font-size:13px; }
     .card-spend { text-align:right; }
     .amount { font-size:17px; font-weight:720; letter-spacing:-.4px; }
-    .edit-hint { font-size:12px; color:var(--muted); margin-top:4px; }
+.edit-hint { font-size:12px; color:var(--muted); margin-top:4px; }
+    .performance { margin-top:10px; }
+    .performance-text { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:12px; }
+    .performance-text strong { color:#50535b; font-weight:700; }
+    .progress-track { height:6px; margin-top:6px; overflow:hidden; border-radius:99px; background:#e9edf3; }
+    .progress-bar { height:100%; border-radius:inherit; background:var(--blue); }
     .empty { padding:38px 22px; border:1.5px dashed #d5d6db; border-radius:18px; text-align:center; color:var(--muted); background:rgba(255,255,255,.55); line-height:1.5; }
     .empty strong { display:block; color:#484a50; font-size:16px; margin-bottom:5px; }
     .fab { position:fixed; bottom:25px; left:50%; width:calc(100% - 40px); max-width:440px; transform:translateX(-50%); border:0; border-radius:16px; background:#202124; color:white; height:54px; font-size:16px; font-weight:700; box-shadow:0 7px 18px rgba(0,0,0,.18); }
@@ -75,6 +80,7 @@
       <label for="name">카드 이름</label><input id="name" required maxlength="28" placeholder="예: 신한 딥드림 카드" autocomplete="off">
       <label for="lastFour">카드 끝번호 <span style="font-weight:400">(선택)</span></label><input id="lastFour" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="1234" autocomplete="off">
       <label for="spending">지출 금액 · <span id="formMonth"></span></label><input id="spending" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required>
+<label for="target">월 실적 목표</label><input id="target" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 300000" required>
       <label>카드 색상</label><div class="color-set" id="colors"></div>
       <div class="form-actions"><button type="button" class="delete hidden" id="deleteCard">삭제</button><button class="primary" id="saveCard">저장</button></div>
     </form>
@@ -82,9 +88,10 @@
 
   <script>
     const colors=['#007aff','#8257e6','#ef5b72','#f19a38','#17a673','#3d78c9'];
-    const state={ month:new Date().toISOString().slice(0,7), cards:[], editing:null, color:colors[0] };
+const koreaMonth=()=>{ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit'}).formatToParts(); const value=type=>parts.find(part=>part.type===type).value; return `${value('year')}-${value('month')}`; };
+    const state={ month:koreaMonth(), cards:[], editing:null, color:colors[0] };
     const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(n||0);
-    const monthText=key=>new Date(key+'-02T12:00:00').toLocaleDateString('ko-KR',{year:'numeric',month:'long'});
+    const monthText=key=>{ const [year,month]=key.split('-').map(Number); return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long'}).format(new Date(Date.UTC(year,month-1,2,12))); };
     function load(){ try { state.cards=JSON.parse(localStorage.getItem('card-spend-data'))||[]; } catch(e) { state.cards=[]; } }
     function save(){ localStorage.setItem('card-spend-data',JSON.stringify(state.cards)); }
     function amount(card){ return Number(card.spending?.[state.month]||0); }
@@ -93,17 +100,20 @@
       const total=state.cards.reduce((sum,c)=>sum+amount(c),0); $('#total').textContent=money(total); $('#cardCount').textContent=`카드 ${state.cards.length}개`;
       const list=$('#cards'); list.innerHTML='';
       if(!state.cards.length){ list.innerHTML='<div class="empty"><strong>등록된 카드가 없어요</strong>첫 카드를 추가하고 월별 지출을 기록해 보세요.</div>'; return; }
-      state.cards.forEach(card=>{ const el=document.createElement('button'); el.className='card'; el.innerHTML=`<span class="card-mark" style="background:${card.color}">${card.name.trim().charAt(0).toUpperCase()}</span><span class="card-info"><span class="card-name">${escapeHtml(card.name)}</span><span class="card-number">${card.lastFour?'•••• '+escapeHtml(card.lastFour):'끝번호를 등록하지 않았어요'}</span></span><span class="card-spend"><span class="amount">${money(amount(card))}</span><span class="edit-hint">금액 수정</span></span>`; el.addEventListener('click',()=>openForm(card)); list.appendChild(el); });
+      state.cards.forEach(card=>{ const spent=amount(card), target=Math.max(0,Number(card.target)||0), ratio=target?Math.min(spent/target,1):0, remaining=Math.max(target-spent,0); const el=document.createElement('button'); el.className='card'; el.innerHTML=`<span class="card-mark" style="background:${card.color}">${card.name.trim().charAt(0).toUpperCase()}</span><span class="card-info"><span class="card-name">${escapeHtml(card.name)}</span><span class="card-number">${card.lastFour?'•••• '+escapeHtml(card.lastFour):'끝번호를 등록하지 않았어요'}</span><span class="performance">${target?`<span class="performance-text"><strong>진행률 ${Math.round((spent/target)*100)}%</strong><span>남은 ${money(remaining)}</span></span><span class="progress-track"><span class="progress-bar" style="width:${ratio*100}%"></span></span>`:'<span class="performance-text"><span>월 실적 목표를 설정하세요</span></span>'}</span></span><span class="card-spend"><span class="amount">${money(spent)}</span><span class="edit-hint">금액 수정</span></span>`; el.addEventListener('click',()=>openForm(card)); list.appendChild(el); });
     }
     function escapeHtml(v){const d=document.createElement('div');d.textContent=v;return d.innerHTML;}
     function showColors(){ $('#colors').innerHTML=colors.map(c=>`<button class="swatch ${c===state.color?'selected':''}" type="button" data-color="${c}" style="background:${c}" aria-label="Select color"></button>`).join(''); $('#colors').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.color=b.dataset.color;showColors();}); }
-    function openForm(card=null){ state.editing=card; state.color=card?.color||colors[0]; $('#formTitle').textContent=card?'카드 수정':'카드 추가'; $('#name').value=card?.name||''; $('#lastFour').value=card?.lastFour||''; $('#spending').value=card?amount(card):''; $('#deleteCard').classList.toggle('hidden',!card); showColors(); $('#modalBackdrop').classList.add('open'); setTimeout(()=>$('#name').focus(),180); }
+    function openForm(card=null){ state.editing=card; state.color=card?.color||colors[0]; $('#formTitle').textContent=card?'카드 수정':'카드 추가'; $('#name').value=card?.name||''; $('#lastFour').value=card?.lastFour||''; $('#spending').value=card?amount(card):''; $('#target').value=card?.target||''; $('#deleteCard').classList.toggle('hidden',!card); showColors(); $('#modalBackdrop').classList.add('open'); setTimeout(()=>$('#name').focus(),180); }
     function closeForm(){ $('#modalBackdrop').classList.remove('open'); state.editing=null; }
-    function changeMonth(step){ const [y,m]=state.month.split('-').map(Number); state.month=new Date(y,m-1+step,2).toISOString().slice(0,7); render(); }
-    $('#cardForm').addEventListener('submit',e=>{ e.preventDefault(); const name=$('#name').value.trim(); const lastFour=$('#lastFour').value.replace(/\D/g,'').slice(-4); const spending=Math.max(0,Number($('#spending').value)||0); let card=state.editing; if(card){card.name=name;card.lastFour=lastFour;card.color=state.color;} else {card={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name,lastFour,color:state.color,spending:{}};state.cards.push(card);} card.spending=card.spending||{};card.spending[state.month]=spending;save();closeForm();render(); });
+    function changeMonth(step){ const [year,month]=state.month.split('-').map(Number); const nextMonth=month+step; state.month=`${year+Math.floor((nextMonth-1)/12)}-${String(((nextMonth-1)%12+12)%12+1).padStart(2,'0')}`; render(); }
+    $('#cardForm').addEventListener('submit',e=>{ e.preventDefault(); const name=$('#name').value.trim(); const lastFour=$('#lastFour').value.replace(/\D/g,'').slice(-4); const spending=Math.max(0,Number($('#spending').value)||0); const target=Math.max(0,Number($('#target').value)||0); let card=state.editing; if(card){card.name=name;card.lastFour=lastFour;card.color=state.color;card.target=target;} else {card={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name,lastFour,color:state.color,target,spending:{}};state.cards.push(card);} card.spending=card.spending||{};card.spending[state.month]=spending;save();closeForm();render(); });
     $('#deleteCard').onclick=()=>{ if(state.editing && confirm(`삭제 ${state.editing.name}?`)){ state.cards=state.cards.filter(c=>c.id!==state.editing.id);save();closeForm();render(); } };
     ['#addTop','#addLink','#addFab'].forEach(s=>$(s).onclick=()=>openForm()); $('#closeModal').onclick=closeForm; $('#modalBackdrop').onclick=e=>{if(e.target===e.currentTarget)closeForm();}; $('#previous').onclick=()=>changeMonth(-1); $('#next').onclick=()=>changeMonth(1);
     load(); render();
   </script>
 </body>
 </html>
+
+
+
